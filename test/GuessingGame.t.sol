@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
-import { Test } from "dependencies/forge-std-1.9.5/src/Test.sol";
-import { GuessingGame } from "src/GuessingGame.sol";
-import { ContractRegistry } from "flare-periphery/src/coston2/ContractRegistry.sol";
+import {Test} from "dependencies/forge-std-1.9.5/src/Test.sol";
+import {GuessingGame} from "src/GuessingGame.sol";
+import {ContractRegistry} from "flare-periphery/src/coston2/ContractRegistry.sol";
 
-import { Strings } from "@openzeppelin-contracts/utils/Strings.sol";
-import { MockRandomNumberV2 } from "src/utils/MockRandomNumberV2.sol";
+import {Strings} from "@openzeppelin-contracts/utils/Strings.sol";
+import {MockRandomNumberV2} from "src/utils/MockRandomNumberV2.sol";
 
 contract TestGuessingGame is Test {
     GuessingGame game;
@@ -36,7 +36,8 @@ contract TestGuessingGame is Test {
         mockRandom.setRandomNumber(_secretNumber);
     }
 
-    function testFail_MaxNumberTooBig() public {
+    function test_MaxNumberTooBig() public {
+        vm.expectRevert("Only numbers smaller than 65535 allowed");
         game = new GuessingGame(1000000);
     }
 
