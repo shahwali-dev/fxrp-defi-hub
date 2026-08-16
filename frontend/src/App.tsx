@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useAccount, useConnect, useDisconnect, useWriteContract, useReadContract, useWaitForTransactionReceipt } from 'wagmi';
-import { parseEther, formatEther } from 'viem';
+import { parseUnits, formatEther } from 'viem';
 import { injected } from 'wagmi/connectors';
 
-const CONTRACT_ADDRESS = '0xF7Aa71aF0f4FBDEd0F81565F55E85518907F69A6' as const;
-const FXRP_ADDRESS = '0x0b6A3645c240605887a5532109323A3E12273dc7' as const;
+// ---- Environment Variables ----
+const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS as string;
+const FXRP_ADDRESS = import.meta.env.VITE_FXRP_ADDRESS as string;
 
 const CONTRACT_ABI = [
   { inputs: [{ name: 'amount', type: 'uint256' }], name: 'depositFXRP', outputs: [], stateMutability: 'nonpayable', type: 'function' },
@@ -36,35 +37,35 @@ function App() {
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [status, setStatus] = useState<string>('');
 
-  // ---- Read Contract with refetch ----
+  // ---- Read Contract ----
   const { data: price, refetch: refetchPrice } = useReadContract({
-    address: CONTRACT_ADDRESS,
+    address: CONTRACT_ADDRESS as `0x${string}`,
     abi: CONTRACT_ABI,
     functionName: 'getFLRPrice',
   });
 
   const { data: fxrpBalance, refetch: refetchBalance } = useReadContract({
-    address: CONTRACT_ADDRESS,
+    address: CONTRACT_ADDRESS as `0x${string}`,
     abi: CONTRACT_ABI,
     functionName: 'getFXRPBalance',
     args: address ? [address] : undefined,
   });
 
   const { data: firelightShares, refetch: refetchFirelight } = useReadContract({
-    address: CONTRACT_ADDRESS,
+    address: CONTRACT_ADDRESS as `0x${string}`,
     abi: CONTRACT_ABI,
     functionName: 'getFirelightShares',
     args: address ? [address] : undefined,
   });
 
   const { data: upshiftShares, refetch: refetchUpshift } = useReadContract({
-    address: CONTRACT_ADDRESS,
+    address: CONTRACT_ADDRESS as `0x${string}`,
     abi: CONTRACT_ABI,
     functionName: 'getUpshiftShares',
     args: address ? [address] : undefined,
   });
 
-  // ---- Refresh all data ----
+  // ---- Refresh ----
   const refreshAllData = () => {
     refetchBalance();
     refetchFirelight();
@@ -74,7 +75,7 @@ function App() {
     setTimeout(() => setStatus(''), 2000);
   };
 
-  // ---- Auto-refresh after transaction ----
+  // ---- Auto-refresh after any successful transaction ----
   useEffect(() => {
     if (isSuccess) {
       refreshAllData();
@@ -83,14 +84,15 @@ function App() {
     }
   }, [isSuccess]);
 
+  // ---- Handle Approve -> Deposit flow (FXRP) ----
   useEffect(() => {
     if (isSuccess && isApproving && pendingAction === 'deposit') {
-      const amount = parseEther(depositAmount);
+      const amount = parseUnits(depositAmount, 6);
       setStatus('⏳ Depositing FXRP...');
       setIsApproving(false);
       
       writeContract({
-        address: CONTRACT_ADDRESS,
+        address: CONTRACT_ADDRESS as `0x${string}`,
         abi: CONTRACT_ABI,
         functionName: 'depositFXRP',
         args: [amount],
@@ -100,30 +102,48 @@ function App() {
     }
   }, [isSuccess, isApproving, pendingAction]);
 
+  // ---- Handle Approve -> Deposit flow (Upshift) ----
+  useEffect(() => {
+    if (isSuccess && isApproving && pendingAction === 'upshift') {
+      const amount = parseUnits(upshiftAmount, 6);
+      setStatus('⏳ Depositing to Upshift...');
+      setIsApproving(false);
+      
+      writeContract({
+        address: CONTRACT_ADDRESS as `0x${string}`,
+        abi: CONTRACT_ABI,
+        functionName: 'depositUpshift',
+        args: [amount],
+      });
+      setPendingAction(null);
+      setUpshiftAmount('');
+    }
+  }, [isSuccess, isApproving, pendingAction, upshiftAmount]);
+
   // ---- Handlers ----
   const handleDeposit = () => {
     if (!depositAmount) return;
-    const amount = parseEther(depositAmount);
+    const amount = parseUnits(depositAmount, 6);
     setStatus('⏳ Approving FXRP...');
     setPendingAction('deposit');
     setIsApproving(true);
     
     writeContract({
-      address: FXRP_ADDRESS,
+      address: FXRP_ADDRESS as `0x${string}`,
       abi: FXRP_ABI,
       functionName: 'approve',
-      args: [CONTRACT_ADDRESS, amount],
+      args: [CONTRACT_ADDRESS as `0x${string}`, amount],
     });
   };
 
   const handleFirelightDeposit = () => {
     if (!firelightAmount) return;
-    const amount = parseEther(firelightAmount);
+    const amount = parseUnits(firelightAmount, 6);
     setStatus('⏳ Depositing to Firelight...');
     setPendingAction('firelight');
     
     writeContract({
-      address: CONTRACT_ADDRESS,
+      address: CONTRACT_ADDRESS as `0x${string}`,
       abi: CONTRACT_ABI,
       functionName: 'depositFirelight',
       args: [amount],
@@ -132,15 +152,16 @@ function App() {
 
   const handleUpshiftDeposit = () => {
     if (!upshiftAmount) return;
-    const amount = parseEther(upshiftAmount);
-    setStatus('⏳ Depositing to Upshift...');
+    const amount = parseUnits(upshiftAmount, 6);
+    setStatus('⏳ Approving FXRP for Upshift...');
     setPendingAction('upshift');
+    setIsApproving(true);
     
     writeContract({
-      address: CONTRACT_ADDRESS,
-      abi: CONTRACT_ABI,
-      functionName: 'depositUpshift',
-      args: [amount],
+      address: FXRP_ADDRESS as `0x${string}`,
+      abi: FXRP_ABI,
+      functionName: 'approve',
+      args: [CONTRACT_ADDRESS as `0x${string}`, amount],
     });
   };
 
