@@ -209,6 +209,18 @@ The frontend is deployed at:
 
 ---
 
+## 🎬 Demo Video
+
+Watch the full demo of FXRP DeFi Hub on YouTube:
+
+<p align="center">
+  <a href="https://youtu.be/jz6hIxApv_0">
+    <img src="https://img.youtube.com/vi/jz6hIxApv_0/0.jpg" alt="FXRP DeFi Hub Demo" width="100%" />
+  </a>
+</p>
+
+---
+
 ## 🗺️ Future Roadmap
 
 ### 1. Multi-Asset Support
